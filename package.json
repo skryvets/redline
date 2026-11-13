@@ -1,0 +1,14 @@
+{
+  "name": "redline",
+  "version": "0.1.0",
+  "description": "A review-first video editor. You leave notes on the timeline, Claude Code makes the edit",
+  "main": "main.js",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test lib/"
+  },
+  "devDependencies": {
+    "electron": "^45.3.2"
+  }
+}

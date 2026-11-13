@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' file:">
+  <title>Redline</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="stage">
+    <video id="video" hidden></video>
+    <section id="welcome" hidden>
+      <h1>Redline</h1>
+      <p>Leave notes on the timeline. Claude makes the edit.</p>
+      <button id="open" class="primary">Open a project folder</button>
+    </section>
+    <form id="brief" hidden>
+      <h1 id="brief-title"></h1>
+      <label for="brief-text">There is no cut yet. Describe the video you want from this folder</label>
+      <textarea id="brief-text" rows="5" placeholder="A 30 second funny short from the clips in footage/, cover the cuts with broll/"></textarea>
+      <button class="primary" id="brief-go">Make the first cut</button>
+    </form>
+  </main>
+  <footer id="deck" hidden>
+    <div id="timeline">
+      <div id="track" aria-label="Timeline">
+        <div id="played"></div>
+        <div id="playhead"></div>
+        <div id="pins"></div>
+      </div>
+      <form id="note" hidden>
+        <input id="note-text" type="text" autocomplete="off" aria-label="Note for Claude" placeholder="What should Claude change here?">
+        <button type="button" id="note-delete" aria-label="Delete this note" title="Delete this note">&times;</button>
+      </form>
+    </div>
+    <div id="bar">
+      <button id="project" title="Open another project folder"></button>
+      <select id="version" aria-label="Version"></select>
+      <span id="time"></span>
+      <button id="status" title="Show or hide what Claude said"></button>
+      <button id="add" title="Add a note at the playhead (M)">+ Note</button>
+      <button id="fix" class="primary"></button>
+    </div>
+    <pre id="details" hidden></pre>
+  </footer>
+  <script src="../lib/core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
