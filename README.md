@@ -11,6 +11,7 @@ Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 3. Watch the cut. Press `M` where something is wrong and type what should change
 4. Press **Fix everything**. Every open note goes to Claude Code in one request
 5. A new version appears next to the old one. Nothing is ever overwritten
+6. Happy with a version? **Export** saves it as an mp4 wherever you like. It is also already sitting in `renders/`
 
 Redline is not a render engine. It runs the Claude Code you already have (`claude -p`) inside the project folder, with a short guide that tells it how to behave as an editor. Claude does the work with ordinary tools: ffmpeg for cuts and audio, Whisper for word timings, Remotion for titles and captions. Your own `CLAUDE.md`, skills and memory apply too, so it edits the way you taught it
 
