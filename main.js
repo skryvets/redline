@@ -61,7 +61,7 @@ async function projectState() {
     name,
     url: pathToFileURL(path.join(project, 'renders', name)).href,
   }));
-  return {name: path.basename(project), renders, markers: state.markers, running: Boolean(run)};
+  return {name: path.basename(project), renders, markers: state.markers, runningSince: run ? run.startedAt : null};
 }
 
 async function setProject(dir) {
@@ -127,14 +127,14 @@ function launch(job) {
   // an app started from Finder gets a bare PATH that misses Homebrew and ~/.local/bin
   const PATH = [process.env.PATH, '/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin')].join(path.delimiter);
   const child = spawn('claude', args, {cwd: job.dir, stdio: ['ignore', 'pipe', 'pipe'], env: {...process.env, PATH}});
-  const current = {child, job, sessionId: null, summary: '', failed: false, sawResult: false, stopped: false, stderr: '', killTimer: null};
+  const current = {child, job, sessionId: null, summary: '', failed: false, sawResult: false, stopped: false, stderr: '', killTimer: null, startedAt: Date.now()};
   run = current;
   readline.createInterface({input: child.stdout}).on('line', (line) => {
     const ev = core.describeEvent(line);
     if (!ev) return;
     if (ev.sessionId) current.sessionId = ev.sessionId;
     if (ev.done) Object.assign(current, {sawResult: true, summary: ev.summary, failed: ev.error});
-    else if (ev.status) send({type: 'status', text: ev.status});
+    else if (ev.status) send({type: 'status', text: ev.status.replaceAll(`${job.dir}${path.sep}`, '')});
   });
   child.stderr.on('data', (chunk) => {
     current.stderr = (current.stderr + chunk).slice(-2000);

@@ -18,6 +18,7 @@ let markers = [];
 let render = null;
 let editing = null;
 let running = false;
+let runningSince = 0;
 let log = [];
 
 const current = () => markers.filter((m) => m.render === render).sort((a, b) => a.t - b.t);
@@ -169,6 +170,7 @@ async function startRun(request) {
     return;
   }
   running = true;
+  runningSince = Date.now();
   log = [];
   showDetails('');
   setStatus('Claude is starting');
@@ -184,7 +186,8 @@ async function refresh(select) {
   project = await api.loadProject();
   if (project) {
     markers = project.markers;
-    running = project.running;
+    running = project.runningSince !== null;
+    if (running) runningSince = project.runningSince;
     const names = renderNames();
     setRender(names.includes(select) ? select : names.includes(render) ? render : names.at(-1) ?? null);
   }
@@ -233,6 +236,11 @@ function tick() {
   $('playhead').style.left = ratio;
   $('played').style.width = ratio;
   $('time').textContent = `${fmt(video.currentTime)} / ${fmt(duration)}`;
+  $('elapsed').hidden = !running;
+  if (running) {
+    const seconds = Math.floor((Date.now() - runningSince) / 1000);
+    $('elapsed').textContent = `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  }
   requestAnimationFrame(tick);
 }
 

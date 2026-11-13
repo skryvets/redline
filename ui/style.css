@@ -80,7 +80,7 @@ textarea { resize: vertical; width: 100%; }
 
 #project { font-weight: 600; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-#time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#time, #elapsed { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 #status {
   flex: 1;

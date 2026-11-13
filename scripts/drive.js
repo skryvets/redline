@@ -8,6 +8,11 @@ const {app} = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 
+// keep painting while the window sits behind other apps, otherwise the recording freezes
+app.commandLine.appendSwitch('disable-features', 'MacWebContentsOcclusion,CalculateNativeWinOcclusion');
+app.commandLine.appendSwitch('disable-renderer-backgrounding');
+app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
+
 require('../main.js');
 
 const {REDLINE_EVAL, REDLINE_SHOT, REDLINE_RECORD, REDLINE_SIZE} = process.env;
@@ -35,6 +40,10 @@ async function record(win, dir, isDone) {
 
 app.on('browser-window-created', (_event, win) => {
   if (REDLINE_SIZE) win.setContentSize(...REDLINE_SIZE.split('x').map(Number));
+  // a scripted run should not grab the keyboard or play sound on the machine it runs on
+  win.blur();
+  win.webContents.setAudioMuted(true);
+  win.webContents.setBackgroundThrottling(false);
   win.webContents.once('did-finish-load', async () => {
     await wait(1500);
     let done = false;
