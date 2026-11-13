@@ -80,6 +80,18 @@ async function openProject() {
   return projectState();
 }
 
+async function exportRender(render) {
+  if (!project) throw new Error('Open a project folder first');
+  if (!(await renderNames(project)).includes(render)) throw new Error('That version no longer exists');
+  const {canceled, filePath} = await dialog.showSaveDialog(win, {
+    title: 'Export this version',
+    defaultPath: path.join(app.getPath('desktop'), `${path.basename(project)}-${render}`),
+  });
+  if (canceled) return null;
+  await fsp.copyFile(path.join(project, 'renders', render), filePath);
+  return filePath;
+}
+
 function cleanMarkers(markers) {
   if (!Array.isArray(markers)) throw new Error('Markers must be a list');
   return markers.map((m) => ({
@@ -212,6 +224,7 @@ app.whenReady().then(async () => {
       state.markers = clean;
     });
   });
+  ipcMain.handle('render:export', (_event, render) => exportRender(String(render)));
   ipcMain.handle('claude:start', (_event, request) => start(request));
   ipcMain.handle('claude:stop', stop);
 

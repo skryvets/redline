@@ -62,7 +62,7 @@ function draw() {
   $('brief-title').textContent = project.name;
   $('brief-text').disabled = running;
   $('brief-go').disabled = running;
-  for (const id of ['version', 'time', 'add', 'timeline']) $(id).hidden = !hasCut;
+  for (const id of ['version', 'time', 'export', 'add', 'timeline']) $(id).hidden = !hasCut;
 
   const select = $('version');
   select.replaceChildren(...project.renders.map((r) => new Option(r.name.replace('.mp4', ''), r.name, false, r.name === render)));
@@ -159,6 +159,15 @@ async function deleteNote() {
   noteText.value = '';
   closeNote(true);
   if (marker.note) setStatus(`Note at ${fmt(marker.t)} deleted`);
+}
+
+async function exportRender() {
+  try {
+    const saved = await api.exportRender(render);
+    if (saved) setStatus(`Exported ${render.replace('.mp4', '')} to ${saved}`);
+  } catch (err) {
+    setStatus(`Could not export: ${cleanError(err)}`, 'error');
+  }
 }
 
 async function startRun(request) {
@@ -278,6 +287,7 @@ $('note-delete').addEventListener('click', deleteNote);
 
 $('open').addEventListener('click', openProject);
 $('project').addEventListener('click', openProject);
+$('export').addEventListener('click', exportRender);
 $('add').addEventListener('click', addNote);
 $('fix').addEventListener('click', fixOrStop);
 $('version').addEventListener('change', (event) => {
