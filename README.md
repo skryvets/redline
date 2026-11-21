@@ -29,7 +29,7 @@ project/
 
 ## Download
 
-[Download the latest Redline for Apple silicon](https://github.com/skryvets/redline/releases/latest/download/Redline-arm64.dmg). This link always points to the newest release
+[Download the latest Redline for Apple silicon](https://github.com/skryvets/redline/releases/latest/download/Redline-latest-arm64.dmg). This link always points to the newest release
 
 Need a specific version? Every version stays on the [releases page](https://github.com/skryvets/redline/releases)
 
@@ -65,7 +65,7 @@ The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it.
 
 The app icon is drawn in `ui/icon.svg`. `build/icon.icns` is that drawing rendered at 1024px and packed with `iconutil`, so redo it when the SVG changes
 
-Every release needs both files from `npm run dist` attached: `Redline-<version>-arm64.dmg` for that exact version and `Redline-<version>-arm64-mac.zip` for the updater. When the release is published, a GitHub Action adds `Redline-arm64.dmg` for the always-latest link
+Every release needs both files from `npm run dist` attached: `Redline-<version>-arm64.dmg` for that exact version and `Redline-<version>-arm64-mac.zip` for the updater. When the release is published, a GitHub Action adds `Redline-latest-arm64.dmg` for the always-latest link
 
 The updater is hand-rolled because Electron's own updater [needs a signed app](https://www.electronjs.org/docs/latest/api/auto-updater), and these builds are only ad-hoc signed, with no Developer ID. The checksum proves the download is the file on the release, not who made it, so the trust anchor is the GitHub repository
 
