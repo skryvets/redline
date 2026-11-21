@@ -12,6 +12,7 @@ Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 4. Press **Fix**. Every open note goes to Claude Code in one request
 5. A new version appears next to the old one. Nothing is ever overwritten
 6. Happy with a version? **Export** saves it as an mp4 wherever you like. It is also already sitting in `renders/`
+7. Press **Create thumbnail** for a YouTube thumbnail of that version. Claude designs it from the video's content, and your own `CLAUDE.md` or thumbnail skill sets the style if you have one
 
 Every folder you add stays in the **Projects** sidebar on the left, with its name and where it lives. Click one to switch to it, even while Claude is still working on another: a red dot marks the projects Claude is busy in. The `x` on a row takes the project off the list and leaves the folder on disk alone
 
@@ -22,6 +23,7 @@ project/
   footage/ broll/ ...   your material, read-only for Claude
   edit/                 Claude's cut list, scripts and compositions
   renders/v001.mp4      every version, never overwritten
+  thumbnails/           every YouTube thumbnail, never overwritten
   redline.json          your notes and the Claude session id
 ```
 
@@ -63,7 +65,7 @@ The updater is hand-rolled because Electron's own updater [needs a signed app](h
 
 ## What Claude is allowed to do
 
-Each run starts Claude Code with `--permission-mode acceptEdits` and `--allowedTools Bash,Read,Edit,Write,Glob,Grep`, working in the project folder. That means it can run shell commands without asking. Open only folders you trust, the same as you would with Claude Code in a terminal
+Each run starts Claude Code with `--permission-mode acceptEdits` and `--allowedTools Bash,Read,Edit,Write,Glob,Grep,Skill`, working in the project folder. That means it can run shell commands without asking. Open only folders you trust, the same as you would with Claude Code in a terminal
 
 ## Notes
 

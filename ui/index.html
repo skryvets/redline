@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' file:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' file:; img-src 'self' file:">
   <title>Redline</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -64,6 +64,7 @@
         <button id="status" title="Show or hide what Claude said"></button>
         <span id="elapsed" hidden></span>
         <button id="export" title="Save this version as a video file">Export</button>
+        <button id="thumbnail-open" title="Create a YouTube thumbnail from this version">Create thumbnail</button>
         <button id="add" title="Add a note at the playhead (N or M)">+ Note</button>
         <button id="fix" class="primary"></button>
       </div>
@@ -78,6 +79,19 @@
     <form method="dialog">
       <button type="button" id="about-update" class="primary" hidden></button>
       <button id="about-close">Close</button>
+    </form>
+  </dialog>
+  <dialog id="thumbnail" aria-labelledby="thumbnail-title">
+    <h1 id="thumbnail-title">YouTube thumbnail</h1>
+    <img id="thumbnail-image" alt="" hidden>
+    <select id="thumbnail-pick" aria-label="Thumbnail" hidden></select>
+    <label for="thumbnail-direction">Anything it should say or show? Leave empty and Claude works it out from the video</label>
+    <textarea id="thumbnail-direction" rows="3" placeholder="Use the moment at 0:42, the title should ask a question"></textarea>
+    <p id="thumbnail-status" role="status"></p>
+    <form method="dialog">
+      <button type="button" id="thumbnail-export" hidden>Export</button>
+      <button id="thumbnail-close">Close</button>
+      <button type="button" id="thumbnail-create" class="primary"></button>
     </form>
   </dialog>
   <script src="../lib/core.js"></script>

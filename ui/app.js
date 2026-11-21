@@ -26,6 +26,7 @@ let runningSince = 0;
 let log = [];
 let shuttle = 0;
 let shuttleAt = 0;
+let thumbnail = null;
 
 const current = () => markers.filter((m) => m.render === render).sort((a, b) => a.t - b.t);
 const renderNames = () => project.renders.map((r) => r.name);
@@ -115,7 +116,7 @@ function draw() {
   $('brief-title').textContent = project.name;
   $('brief-text').disabled = running;
   $('brief-go').disabled = running;
-  for (const id of ['version', 'time', 'export', 'add', 'timeline']) $(id).hidden = !hasCut;
+  for (const id of ['version', 'time', 'export', 'thumbnail-open', 'add', 'timeline']) $(id).hidden = !hasCut;
 
   const select = $('version');
   select.replaceChildren(...project.renders.map((r) => new Option(r.name.replace('.mp4', ''), r.name, false, r.name === render)));
@@ -126,8 +127,27 @@ function draw() {
   fix.textContent = running ? 'Stop' : open ? `Fix (${open})` : 'Fix';
   fix.disabled = !running && open === 0;
   $('add').disabled = running;
+  drawThumbnails();
   statusEl.classList.toggle('busy', running);
   drawPins();
+}
+
+function drawThumbnails() {
+  const list = project.thumbnails;
+  if (!list.some((t) => t.name === thumbnail)) thumbnail = list.at(-1)?.name ?? null;
+  const entry = list.find((t) => t.name === thumbnail);
+  const image = $('thumbnail-image');
+  image.hidden = !entry;
+  if (entry && image.getAttribute('src') !== entry.url) image.src = entry.url;
+  image.alt = entry ? `Thumbnail ${entry.name}` : '';
+  const pick = $('thumbnail-pick');
+  pick.hidden = list.length < 2;
+  pick.replaceChildren(...list.map((t) => new Option(t.name.replace('.png', ''), t.name, false, t.name === thumbnail)));
+  $('thumbnail-export').hidden = !entry;
+  $('thumbnail-direction').disabled = running;
+  const create = $('thumbnail-create');
+  create.disabled = running;
+  create.textContent = entry ? 'Create another' : 'Create thumbnail';
 }
 
 function drawPins() {
@@ -223,13 +243,45 @@ async function exportRender() {
   }
 }
 
-async function startRun(request) {
+function setThumbnailStatus(text, kind = '') {
+  $('thumbnail-status').textContent = text;
+  $('thumbnail-status').className = kind;
+}
+
+function openThumbnails() {
+  closeNote(true);
+  setShuttle(0);
+  setThumbnailStatus(running ? 'Claude is working. You can create a thumbnail when it is done' : '');
+  drawThumbnails();
+  if (!$('thumbnail').open) $('thumbnail').showModal();
+}
+
+async function createThumbnail() {
+  const started = await startRun({render, direction: $('thumbnail-direction').value}, api.startThumbnail);
+  if (!started) {
+    setThumbnailStatus(statusEl.textContent, 'error');
+    return;
+  }
+  $('thumbnail-direction').value = '';
+  $('thumbnail').close();
+}
+
+async function exportThumbnail() {
+  try {
+    const saved = await api.exportThumbnail(thumbnail);
+    if (saved) setThumbnailStatus(`Exported to ${saved}`);
+  } catch (err) {
+    setThumbnailStatus(`Could not export: ${cleanError(err)}`, 'error');
+  }
+}
+
+async function startRun(request, begin = api.start) {
   closeNote(true);
   try {
-    await api.start(request);
+    await begin(request);
   } catch (err) {
     setStatus(cleanError(err), 'error');
-    return;
+    return false;
   }
   running = true;
   runningSince = Date.now();
@@ -238,6 +290,7 @@ async function startRun(request) {
   showDetails('');
   setStatus('Claude is starting');
   draw();
+  return true;
 }
 
 async function fixOrStop() {
@@ -264,7 +317,8 @@ function onEvent(ev) {
     if (ev.type !== 'done' || !other) return;
     other.running = false;
     draw();
-    if (!running) setStatus(`${other.name}: ${ev.ok ? `${ev.render.replace('.mp4', '')} is ready` : ev.error.split('\n')[0]}`, ev.ok ? '' : 'error');
+    const made = ev.thumbnail ? 'The thumbnail' : ev.render?.replace('.mp4', '');
+    if (!running) setStatus(`${other.name}: ${ev.ok ? `${made} is ready` : ev.error.split('\n')[0]}`, ev.ok ? '' : 'error');
     return;
   }
   if (ev.type === 'status') {
@@ -276,7 +330,12 @@ function onEvent(ev) {
   }
   running = false;
   refresh(ev.render).then(() => {
-    if (ev.ok) {
+    if (ev.ok && ev.thumbnail) {
+      thumbnail = ev.thumbnail;
+      setStatus(`The thumbnail is ready. ${ev.summary.split('\n')[0]}`);
+      showDetails(ev.summary);
+      openThumbnails();
+    } else if (ev.ok) {
       setStatus(`${ev.render.replace('.mp4', '')} is ready. ${ev.summary.split('\n')[0]}`);
       showDetails(ev.summary);
       video.play().catch(() => {});
@@ -375,6 +434,13 @@ $('project').addEventListener('click', () => setSidebar(!sidebarOpen));
 $('sidebar-hide').addEventListener('click', () => setSidebar(false));
 $('export').addEventListener('click', exportRender);
 $('add').addEventListener('click', addNote);
+$('thumbnail-open').addEventListener('click', openThumbnails);
+$('thumbnail-create').addEventListener('click', createThumbnail);
+$('thumbnail-export').addEventListener('click', exportThumbnail);
+$('thumbnail-pick').addEventListener('change', (event) => {
+  thumbnail = event.target.value;
+  drawThumbnails();
+});
 $('fix').addEventListener('click', fixOrStop);
 $('version').addEventListener('change', (event) => {
   setRender(event.target.value);
@@ -429,6 +495,7 @@ async function removeProject(p) {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (document.querySelector('dialog[open]')) return;
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && project?.renders.length) {
     event.preventDefault();
     fixOrStop();
@@ -439,7 +506,7 @@ document.addEventListener('keydown', (event) => {
     setSidebar(!sidebarOpen);
     return;
   }
-  if (isTyping(event.target) || event.metaKey || event.ctrlKey || video.hidden || $('about').open) return;
+  if (isTyping(event.target) || event.metaKey || event.ctrlKey || video.hidden) return;
   const step = event.shiftKey ? FRAME : 1;
   const keys = {
     ' ': togglePlay,

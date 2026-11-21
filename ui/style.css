@@ -217,9 +217,27 @@ textarea { resize: vertical; width: 100%; }
   border-radius: 12px;
   text-align: center;
 }
-#about::backdrop { background: rgba(0, 0, 0, 0.6); }
+#about::backdrop, #thumbnail::backdrop { background: rgba(0, 0, 0, 0.6); }
 #about h1 { margin: 0 0 4px; }
 #about img, #welcome img { align-self: center; }
 #about p { margin: 0 0 12px; color: var(--muted); overflow-wrap: anywhere; }
 #about p.error { color: var(--red); }
 #about form { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 20px; }
+
+#thumbnail {
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 20px;
+  background: var(--deck);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+#thumbnail[open] { display: flex; flex-direction: column; gap: 12px; }
+#thumbnail h1 { margin: 0; font-size: 18px; }
+#thumbnail img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: 6px; background: #000; }
+#thumbnail label { color: var(--muted); }
+#thumbnail p { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+#thumbnail p:empty { display: none; }
+#thumbnail p.error { color: var(--red); }
+#thumbnail form { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
