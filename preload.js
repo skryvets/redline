@@ -2,6 +2,8 @@ const {contextBridge, ipcRenderer} = require('electron');
 
 contextBridge.exposeInMainWorld('redline', {
   openProject: () => ipcRenderer.invoke('project:open'),
+  selectProject: (dir) => ipcRenderer.invoke('project:select', dir),
+  removeProject: (dir) => ipcRenderer.invoke('project:remove', dir),
   loadProject: () => ipcRenderer.invoke('project:load'),
   saveMarkers: (markers) => ipcRenderer.invoke('markers:save', markers),
   exportRender: (render) => ipcRenderer.invoke('render:export', render),

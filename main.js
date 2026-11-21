@@ -15,12 +15,15 @@ const GUIDE = fs.readFileSync(path.join(__dirname, 'editor-guide.md'), 'utf8');
 const STOP_GRACE_MS = 5000;
 
 let win = null;
+let projects = [];
 let project = null;
-let run = null;
+const runs = new Map();
 let stateQueue = Promise.resolve();
 let updating = false;
 
+const projectsFile = () => path.join(app.getPath('userData'), 'projects.json');
 const lastProjectFile = () => path.join(app.getPath('userData'), 'last-project');
+const isDir = async (dir) => Boolean((await fsp.stat(dir).catch(() => null))?.isDirectory());
 
 function send(payload, channel = 'claude:event') {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
@@ -35,16 +38,28 @@ async function readState(dir) {
   }
 }
 
-function updateState(dir, mutate) {
-  const task = stateQueue.then(async () => {
-    const state = await readState(dir);
-    mutate(state);
-    const file = path.join(dir, STATE_FILE);
-    await fsp.writeFile(`${file}.tmp`, JSON.stringify(state, null, 2));
-    await fsp.rename(`${file}.tmp`, file);
-  });
+function queued(work) {
+  const task = stateQueue.then(work);
   stateQueue = task.catch(() => {});
   return task;
+}
+
+async function writeJson(file, value) {
+  await fsp.writeFile(`${file}.tmp`, JSON.stringify(value, null, 2));
+  await fsp.rename(`${file}.tmp`, file);
+}
+
+function updateState(dir, mutate) {
+  return queued(async () => {
+    const state = await readState(dir);
+    mutate(state);
+    await writeJson(path.join(dir, STATE_FILE), state);
+  });
+}
+
+function saveProjects() {
+  const saved = {projects, current: project};
+  return queued(() => writeJson(projectsFile(), saved));
 }
 
 async function renderNames(dir) {
@@ -63,23 +78,45 @@ async function projectState() {
     name,
     url: pathToFileURL(path.join(project, 'renders', name)).href,
   }));
-  return {name: path.basename(project), renders, markers: state.markers, runningSince: run ? run.startedAt : null};
+  return {dir: project, name: path.basename(project), renders, markers: state.markers, runningSince: runs.get(project)?.startedAt ?? null};
 }
 
-async function setProject(dir) {
-  project = dir;
-  await fsp.writeFile(lastProjectFile(), dir);
+async function appState() {
+  const home = os.homedir();
+  const list = projects.map(async (dir) => ({
+    dir,
+    name: path.basename(dir),
+    path: core.shortPath(dir, home),
+    running: runs.has(dir),
+    missing: !(await isDir(dir)),
+  }));
+  return {projects: await Promise.all(list), project: await projectState()};
 }
 
 async function openProject() {
   const {canceled, filePaths} = await dialog.showOpenDialog(win, {
-    title: 'Open a project folder',
+    title: 'Add a project folder',
     properties: ['openDirectory', 'createDirectory'],
   });
-  if (canceled) return null;
-  if (run) throw new Error('Claude is still working on the current project');
-  await setProject(filePaths[0]);
-  return projectState();
+  if (canceled) return false;
+  projects = core.addProject(projects, filePaths[0]);
+  project = filePaths[0];
+  await saveProjects();
+  return true;
+}
+
+async function selectProject(dir) {
+  if (!projects.includes(dir)) throw new Error('That project is no longer in the list');
+  if (!(await isDir(dir))) throw new Error(`${dir} is missing. Reconnect its drive or remove the project`);
+  project = dir;
+  await saveProjects();
+}
+
+async function removeProject(dir) {
+  if (runs.has(dir)) throw new Error('Claude is still working on that project');
+  projects = projects.filter((other) => other !== dir);
+  if (project === dir) project = null;
+  await saveProjects();
 }
 
 async function exportRender(render) {
@@ -108,9 +145,9 @@ function cleanMarkers(markers) {
 
 async function start({render, brief} = {}) {
   if (!project) throw new Error('Open a project folder first');
-  if (run) throw new Error('Claude is already working on this project');
-  if (updating) throw new Error('Redline is updating and will restart in a moment');
   const dir = project;
+  if (runs.has(dir)) throw new Error('Claude is already working on this project');
+  if (updating) throw new Error('Redline is updating and will restart in a moment');
   const state = await readState(dir);
   const names = await renderNames(dir);
   const next = core.nextRenderName(names);
@@ -143,13 +180,13 @@ function launch(job) {
   const PATH = [process.env.PATH, '/opt/homebrew/bin', '/usr/local/bin', path.join(os.homedir(), '.local/bin')].join(path.delimiter);
   const child = spawn('claude', args, {cwd: job.dir, stdio: ['ignore', 'pipe', 'pipe'], env: {...process.env, PATH}});
   const current = {child, job, sessionId: null, summary: '', failed: false, sawResult: false, stopped: false, stderr: '', killTimer: null, startedAt: Date.now()};
-  run = current;
+  runs.set(job.dir, current);
   readline.createInterface({input: child.stdout}).on('line', (line) => {
     const ev = core.describeEvent(line);
     if (!ev) return;
     if (ev.sessionId) current.sessionId = ev.sessionId;
     if (ev.done) Object.assign(current, {sawResult: true, summary: ev.summary, failed: ev.error});
-    else if (ev.status) send({type: 'status', text: ev.status.replaceAll(`${job.dir}${path.sep}`, '')});
+    else if (ev.status) send({type: 'status', dir: job.dir, text: ev.status.replaceAll(`${job.dir}${path.sep}`, '')});
   });
   child.stderr.on('data', (chunk) => {
     current.stderr = (current.stderr + chunk).slice(-2000);
@@ -159,10 +196,10 @@ function launch(job) {
 }
 
 async function finish(current, {err, code}) {
-  if (run !== current) return;
-  run = null;
-  clearTimeout(current.killTimer);
   const {job} = current;
+  if (runs.get(job.dir) !== current) return;
+  runs.delete(job.dir);
+  clearTimeout(current.killTimer);
   // a session id that Claude Code no longer knows must not lock the project out, so retry once without it
   if (!err && code !== 0 && job.sessionId && !current.sawResult && !current.stopped) {
     launch({...job, sessionId: null});
@@ -180,15 +217,15 @@ async function finish(current, {err, code}) {
       else if (err) error = err.code === 'ENOENT' ? 'Claude Code was not found. Install it and make sure `claude` is on your PATH' : err.message;
       else error = current.summary || current.stderr.trim() || `Claude exited with code ${code} without writing renders/${job.next}`;
     }
-    send({type: 'done', ok: made, render: made ? job.next : null, summary: current.summary, error});
+    send({type: 'done', dir: job.dir, ok: made, render: made ? job.next : null, summary: current.summary, error});
   } catch (failure) {
-    send({type: 'done', ok: false, render: null, summary: '', error: failure.message});
+    send({type: 'done', dir: job.dir, ok: false, render: null, summary: '', error: failure.message});
   }
 }
 
 function stop() {
-  if (!run || run.stopped) return;
-  const current = run;
+  const current = runs.get(project);
+  if (!current || current.stopped) return;
   current.stopped = true;
   // SIGINT lets Claude Code end the turn cleanly, SIGTERM is the fallback if it does not exit
   current.child.kill('SIGINT');
@@ -210,7 +247,7 @@ async function about() {
 
 async function installUpdate() {
   if (!app.isPackaged) throw new Error('Redline is running from source. Update it with git pull');
-  if (run) throw new Error('Claude is still working. Update when it is done');
+  if (runs.size) throw new Error('Claude is still working. Update when it is done');
   if (updating) return;
   const found = await checkUpdate();
   if (!found) throw new Error('Redline is already up to date');
@@ -260,18 +297,26 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'ui', 'index.html'));
 }
 
-async function initialProject() {
+async function loadProjects() {
+  const read = (file) => fsp.readFile(file, 'utf8').catch(() => null);
+  const saved = core.readProjects(await read(projectsFile()), await read(lastProjectFile()));
   const fromArgs = process.argv.slice(app.isPackaged ? 1 : 2).find((arg) => !arg.startsWith('-'));
-  const candidates = [fromArgs && path.resolve(fromArgs), await fsp.readFile(lastProjectFile(), 'utf8').catch(() => null)];
-  for (const dir of candidates) {
-    if (dir && (await fsp.stat(dir).catch(() => null))?.isDirectory()) return dir;
+  const asked = fromArgs && path.resolve(fromArgs);
+  projects = saved.projects;
+  if (asked && (await isDir(asked))) {
+    projects = core.addProject(projects, asked);
+    project = asked;
+  } else if (saved.current && (await isDir(saved.current))) {
+    project = saved.current;
   }
-  return null;
+  await saveProjects();
 }
 
 app.whenReady().then(async () => {
   ipcMain.handle('project:open', openProject);
-  ipcMain.handle('project:load', projectState);
+  ipcMain.handle('project:select', (_event, dir) => selectProject(String(dir)));
+  ipcMain.handle('project:remove', (_event, dir) => removeProject(String(dir)));
+  ipcMain.handle('project:load', appState);
   ipcMain.handle('markers:save', (_event, markers) => {
     if (!project) throw new Error('Open a project folder first');
     const clean = cleanMarkers(markers);
@@ -285,8 +330,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('about:load', about);
   ipcMain.handle('update:install', installUpdate);
 
-  const dir = await initialProject();
-  if (dir) await setProject(dir);
+  await loadProjects();
   createMenu();
   createWindow();
   app.on('activate', () => {
@@ -299,5 +343,5 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
-  if (run) run.child.kill('SIGTERM');
+  for (const current of runs.values()) current.child.kill('SIGTERM');
 });

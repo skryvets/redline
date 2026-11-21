@@ -6,12 +6,14 @@ Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 
 ## How it works
 
-1. Open a project folder. Put footage, B-roll, photos and music anywhere inside it
+1. Add a project folder. Put footage, B-roll, photos and music anywhere inside it
 2. No cut yet? Describe the video in one box and press **Make the first cut**
 3. Watch the cut. Press `N` where something is wrong and type what should change
 4. Press **Fix**. Every open note goes to Claude Code in one request
 5. A new version appears next to the old one. Nothing is ever overwritten
 6. Happy with a version? **Export** saves it as an mp4 wherever you like. It is also already sitting in `renders/`
+
+Every folder you add stays in the **Projects** sidebar on the left, with its name and where it lives. Click one to switch to it, even while Claude is still working on another: a red dot marks the projects Claude is busy in. The `x` on a row takes the project off the list and leaves the folder on disk alone
 
 Redline is not a render engine. It runs the Claude Code you already have (`claude -p`) inside the project folder, with a short guide that tells it how to behave as an editor. Claude does the work with ordinary tools: ffmpeg for cuts and audio, Whisper for word timings, Remotion for titles and captions. Your own `CLAUDE.md`, skills and memory apply too, so it edits the way you taught it
 
@@ -47,6 +49,7 @@ The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it.
 | `Enter` / `Esc` | save or discard the note you are typing |
 | `[` `]` | previous or next version |
 | `Cmd+Enter` | fix everything |
+| `Cmd+B` | show or hide the projects sidebar |
 
 ## Updates
 
