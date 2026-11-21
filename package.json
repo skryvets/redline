@@ -1,13 +1,13 @@
 {
   "name": "redline",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A review-first video editor. You leave notes on the timeline, Claude Code makes the edit",
   "main": "main.js",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
     "test": "node --test lib/",
-    "dist": "electron-builder --mac dmg"
+    "dist": "electron-builder --mac"
   },
   "devDependencies": {
     "electron": "^45.3.2",
@@ -21,12 +21,17 @@
       "preload.js",
       "editor-guide.md",
       "lib/core.js",
+      "lib/update.js",
       "ui/**"
     ],
     "mac": {
       "category": "public.app-category.video",
       "identity": "-",
-      "hardenedRuntime": false
+      "hardenedRuntime": false,
+      "target": [
+        "dmg",
+        "zip"
+      ]
     }
   }
 }

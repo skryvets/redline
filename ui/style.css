@@ -158,3 +158,18 @@ textarea { resize: vertical; width: 100%; }
   white-space: pre-wrap;
   user-select: text;
 }
+
+#about {
+  width: min(360px, calc(100vw - 32px));
+  padding: 24px;
+  background: var(--deck);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+}
+#about::backdrop { background: rgba(0, 0, 0, 0.6); }
+#about h1 { margin: 0 0 4px; }
+#about p { margin: 0 0 12px; color: var(--muted); overflow-wrap: anywhere; }
+#about p.error { color: var(--red); }
+#about form { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 20px; }

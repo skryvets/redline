@@ -1,4 +1,4 @@
-const {app, BrowserWindow, dialog, ipcMain} = require('electron');
+const {app, BrowserWindow, dialog, ipcMain, Menu} = require('electron');
 const path = require('node:path');
 const os = require('node:os');
 const fs = require('node:fs');
@@ -7,6 +7,7 @@ const readline = require('node:readline');
 const {pathToFileURL} = require('node:url');
 const {spawn} = require('node:child_process');
 const core = require('./lib/core');
+const update = require('./lib/update');
 
 const STATE_FILE = 'redline.json';
 const TOOLS = 'Bash,Read,Edit,Write,Glob,Grep';
@@ -17,11 +18,12 @@ let win = null;
 let project = null;
 let run = null;
 let stateQueue = Promise.resolve();
+let updating = false;
 
 const lastProjectFile = () => path.join(app.getPath('userData'), 'last-project');
 
-function send(payload) {
-  if (win && !win.isDestroyed()) win.webContents.send('claude:event', payload);
+function send(payload, channel = 'claude:event') {
+  if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
 }
 
 async function readState(dir) {
@@ -107,6 +109,7 @@ function cleanMarkers(markers) {
 async function start({render, brief} = {}) {
   if (!project) throw new Error('Open a project folder first');
   if (run) throw new Error('Claude is already working on this project');
+  if (updating) throw new Error('Redline is updating and will restart in a moment');
   const dir = project;
   const state = await readState(dir);
   const names = await renderNames(dir);
@@ -192,6 +195,58 @@ function stop() {
   current.killTimer = setTimeout(() => current.child.kill('SIGTERM'), STOP_GRACE_MS);
 }
 
+// REDLINE_UPDATE_FEED points the updater at another feed, so an update can be rehearsed without publishing a release
+const checkUpdate = () => update.check(app.getVersion(), process.arch, process.env.REDLINE_UPDATE_FEED);
+
+async function about() {
+  const info = {version: app.getVersion(), update: null, error: null};
+  try {
+    info.update = (await checkUpdate())?.version ?? null;
+  } catch (err) {
+    info.error = err.message;
+  }
+  return info;
+}
+
+async function installUpdate() {
+  if (!app.isPackaged) throw new Error('Redline is running from source. Update it with git pull');
+  if (run) throw new Error('Claude is still working. Update when it is done');
+  if (updating) return;
+  const found = await checkUpdate();
+  if (!found) throw new Error('Redline is already up to date');
+  updating = true;
+  try {
+    await update.install(found, path.resolve(process.execPath, '../../..'), (ratio) => send(ratio, 'update:progress'));
+  } catch (err) {
+    updating = false;
+    if (['EACCES', 'EPERM', 'EROFS'].includes(err.code)) throw new Error('Redline cannot replace itself here. Move it to the Applications folder and try again');
+    throw err;
+  }
+  app.relaunch();
+  app.quit();
+}
+
+function createMenu() {
+  Menu.setApplicationMenu(Menu.buildFromTemplate([
+    {
+      label: app.name,
+      submenu: [
+        {label: `About ${app.name}`, click: () => send(null, 'about:open')},
+        {label: 'Check for Updates…', click: () => send(null, 'about:open')},
+        {type: 'separator'},
+        {role: 'hide'},
+        {role: 'hideOthers'},
+        {role: 'unhide'},
+        {type: 'separator'},
+        {role: 'quit'},
+      ],
+    },
+    {role: 'editMenu'},
+    {role: 'viewMenu'},
+    {role: 'windowMenu'},
+  ]));
+}
+
 function createWindow() {
   win = new BrowserWindow({
     width: 1280,
@@ -227,9 +282,12 @@ app.whenReady().then(async () => {
   ipcMain.handle('render:export', (_event, render) => exportRender(String(render)));
   ipcMain.handle('claude:start', (_event, request) => start(request));
   ipcMain.handle('claude:stop', stop);
+  ipcMain.handle('about:load', about);
+  ipcMain.handle('update:install', installUpdate);
 
   const dir = await initialProject();
   if (dir) await setProject(dir);
+  createMenu();
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

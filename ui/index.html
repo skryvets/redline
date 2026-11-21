@@ -46,6 +46,15 @@
     </div>
     <pre id="details" hidden></pre>
   </footer>
+  <dialog id="about" aria-labelledby="about-title">
+    <h1 id="about-title">Redline</h1>
+    <p id="about-version"></p>
+    <p id="about-status" role="status"></p>
+    <form method="dialog">
+      <button type="button" id="about-update" class="primary" hidden></button>
+      <button id="about-close">Close</button>
+    </form>
+  </dialog>
   <script src="../lib/core.js"></script>
   <script src="app.js"></script>
 </body>

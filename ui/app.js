@@ -342,7 +342,7 @@ document.addEventListener('keydown', (event) => {
     fixOrStop();
     return;
   }
-  if (isTyping(event.target) || event.metaKey || event.ctrlKey || video.hidden) return;
+  if (isTyping(event.target) || event.metaKey || event.ctrlKey || video.hidden || $('about').open) return;
   const step = event.shiftKey ? FRAME : 1;
   const keys = {
     ' ': togglePlay,
@@ -365,6 +365,52 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+async function showAbout(quiet = false) {
+  const dialog = $('about');
+  const status = $('about-status');
+  const button = $('about-update');
+  if (!quiet) {
+    button.hidden = true;
+    status.className = '';
+    status.textContent = 'Checking for updates';
+    if (!dialog.open) dialog.showModal();
+  }
+  const info = await api.loadAbout();
+  $('about-version').textContent = `Version ${info.version}`;
+  if (quiet && !info.update) return;
+  status.className = info.error ? 'error' : '';
+  status.textContent = info.error ? `Could not check for updates: ${info.error}` : info.update ? `Version ${info.update} is available` : 'Redline is up to date';
+  button.hidden = !info.update;
+  button.disabled = false;
+  button.textContent = 'Update and restart';
+  if (!dialog.open) dialog.showModal();
+}
+
+async function installUpdate() {
+  const button = $('about-update');
+  button.disabled = true;
+  $('about-close').disabled = true;
+  $('about-status').className = '';
+  $('about-status').textContent = 'Downloading the update';
+  try {
+    await api.installUpdate();
+  } catch (err) {
+    $('about-status').className = 'error';
+    $('about-status').textContent = `Could not update: ${cleanError(err)}`;
+    button.disabled = false;
+    $('about-close').disabled = false;
+  }
+}
+
+$('about-update').addEventListener('click', installUpdate);
+$('about').addEventListener('cancel', (event) => {
+  if ($('about-close').disabled) event.preventDefault();
+});
+api.onAbout(() => showAbout());
+api.onUpdateProgress((ratio) => {
+  $('about-status').textContent = ratio < 1 ? `Downloading the update ${Math.round(ratio * 100)}%` : 'Installing. Redline will restart';
+});
+
 window.addEventListener('focus', () => {
   if (!editing && !running) refresh();
 });
@@ -374,3 +420,4 @@ refresh().then(() => {
   if (running) setStatus('Claude is working', 'busy');
 });
 tick();
+showAbout(true);
