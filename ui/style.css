@@ -132,18 +132,40 @@ textarea { resize: vertical; width: 100%; }
   position: absolute;
   bottom: calc(100% + 2px);
   display: flex;
-  gap: 6px;
-  width: min(380px, calc(100vw - 32px));
-  padding: 8px;
+  flex-direction: column;
+  gap: 8px;
+  width: min(560px, calc(100vw - 32px));
+  padding: 14px 14px 10px;
   background: #1c1c21;
-  border: 1px solid var(--red);
-  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
   z-index: 2;
 }
 
-#note input { flex: 1; min-width: 0; padding: 6px 8px; }
-#note button { padding: 4px 10px; }
+#note:focus-within { border-color: rgba(255, 255, 255, 0.24); }
+
+#note textarea {
+  display: block;
+  field-sizing: content;
+  min-height: 2lh;
+  max-height: 208px;
+  padding: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  resize: none;
+  line-height: 1.625;
+}
+
+#note textarea::placeholder { color: var(--muted); }
+
+#note-actions { display: flex; align-items: center; gap: 8px; }
+#note-hint { flex: 1; min-width: 0; color: var(--muted); font-size: 12px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+#note-actions button { display: grid; place-items: center; width: 32px; height: 32px; flex: none; padding: 0; border-radius: 50%; }
+#note-delete { background: none; border-color: transparent; color: var(--muted); }
+#note-actions svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 #details {
   max-height: 30vh;
