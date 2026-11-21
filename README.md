@@ -31,7 +31,7 @@ Requirements: Node 20+, [Claude Code](https://code.claude.com/docs) logged in, `
 npm install
 npm start                 # or: npm start -- /path/to/project
 npm test
-npm run dist              # builds dist/Redline-<version>-arm64.dmg
+npm run dist              # builds the DMG and the update zip in dist/
 ```
 
 The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it. A copy downloaded on another Mac is blocked by Gatekeeper until you allow it in System Settings
@@ -47,6 +47,14 @@ The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it.
 | `Enter` / `Esc` | save or discard the note you are typing |
 | `[` `]` | previous or next version |
 | `Cmd+Enter` | fix everything |
+
+## Updates
+
+**Redline - About Redline** shows the installed version and checks the latest [GitHub release](https://github.com/skryvets/redline/releases). **Update and restart** downloads the release zip, checks it against the SHA-256 that GitHub publishes for it, replaces the app and starts it again. Redline also checks once at launch and opens the same window when a newer version is out
+
+Every release needs both files from `npm run dist` attached: the DMG for a first install and `Redline-<version>-arm64-mac.zip` for the updater
+
+The updater is hand-rolled because Electron's own updater [needs a signed app](https://www.electronjs.org/docs/latest/api/auto-updater), and these builds are only ad-hoc signed, with no Developer ID. The checksum proves the download is the file on the release, not who made it, so the trust anchor is the GitHub repository
 
 ## What Claude is allowed to do
 
