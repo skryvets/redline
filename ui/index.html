@@ -8,53 +8,68 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main id="stage">
-    <video id="video" hidden></video>
-    <section id="welcome" hidden>
-      <img src="icon.svg" alt="" width="96" height="96">
-      <h1>Redline</h1>
-      <p>Leave notes on the timeline. Claude makes the edit.</p>
-      <button id="open" class="primary">Open a project folder</button>
-    </section>
-    <form id="brief" hidden>
-      <h1 id="brief-title"></h1>
-      <label for="brief-text">There is no cut yet. Describe the video you want from this folder</label>
-      <textarea id="brief-text" rows="5" placeholder="A 30 second funny short from the clips in footage/, cover the cuts with broll/"></textarea>
-      <button class="primary" id="brief-go">Make the first cut</button>
-    </form>
-  </main>
-  <footer id="deck" hidden>
-    <div id="timeline">
-      <div id="track" aria-label="Timeline">
-        <div id="played"></div>
-        <div id="playhead"></div>
-        <div id="pins"></div>
-      </div>
-      <form id="note" hidden>
-        <textarea id="note-text" rows="2" autocomplete="off" aria-label="Note for Claude" placeholder="What should Claude change here?"></textarea>
-        <div id="note-actions">
-          <button type="button" id="note-delete" aria-label="Delete this note" title="Delete this note">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>
-          </button>
-          <span id="note-hint">Shift + Enter for a new line</span>
-          <button id="note-save" class="primary" aria-label="Save note" title="Save note (Enter)">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
-          </button>
-        </div>
+  <nav id="sidebar" aria-label="Projects" hidden>
+    <header>
+      <h2>Projects</h2>
+      <button id="project-add" aria-label="Add a project folder" title="Add a project folder">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button id="sidebar-hide" aria-label="Hide projects" title="Hide projects (Cmd+B)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM9 5v14"/></svg>
+      </button>
+    </header>
+    <ul id="projects"></ul>
+    <p id="no-projects" hidden>No projects yet</p>
+  </nav>
+  <div id="main">
+    <main id="stage">
+      <video id="video" hidden></video>
+      <section id="welcome" hidden>
+        <img src="icon.svg" alt="" width="96" height="96">
+        <h1>Redline</h1>
+        <p>Leave notes on the timeline. Claude makes the edit.</p>
+        <button id="open" class="primary">Add a project folder</button>
+      </section>
+      <form id="brief" hidden>
+        <h1 id="brief-title"></h1>
+        <label for="brief-text">There is no cut yet. Describe the video you want from this folder</label>
+        <textarea id="brief-text" rows="5" placeholder="A 30 second funny short from the clips in footage/, cover the cuts with broll/"></textarea>
+        <button class="primary" id="brief-go">Make the first cut</button>
       </form>
-    </div>
-    <div id="bar">
-      <button id="project" title="Open another project folder"></button>
-      <select id="version" aria-label="Version"></select>
-      <span id="time"></span>
-      <button id="status" title="Show or hide what Claude said"></button>
-      <span id="elapsed" hidden></span>
-      <button id="export" title="Save this version as a video file">Export</button>
-      <button id="add" title="Add a note at the playhead (N or M)">+ Note</button>
-      <button id="fix" class="primary"></button>
-    </div>
-    <pre id="details" hidden></pre>
-  </footer>
+    </main>
+    <footer id="deck" hidden>
+      <div id="timeline">
+        <div id="track" aria-label="Timeline">
+          <div id="played"></div>
+          <div id="playhead"></div>
+          <div id="pins"></div>
+        </div>
+        <form id="note" hidden>
+          <textarea id="note-text" rows="2" autocomplete="off" aria-label="Note for Claude" placeholder="What should Claude change here?"></textarea>
+          <div id="note-actions">
+            <button type="button" id="note-delete" aria-label="Delete this note" title="Delete this note">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>
+            </button>
+            <span id="note-hint">Shift + Enter for a new line</span>
+            <button id="note-save" class="primary" aria-label="Save note" title="Save note (Enter)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+            </button>
+          </div>
+        </form>
+      </div>
+      <div id="bar">
+        <button id="project" title="Show or hide projects (Cmd+B)"></button>
+        <select id="version" aria-label="Version"></select>
+        <span id="time"></span>
+        <button id="status" title="Show or hide what Claude said"></button>
+        <span id="elapsed" hidden></span>
+        <button id="export" title="Save this version as a video file">Export</button>
+        <button id="add" title="Add a note at the playhead (N or M)">+ Note</button>
+        <button id="fix" class="primary"></button>
+      </div>
+      <pre id="details" hidden></pre>
+    </footer>
+  </div>
   <dialog id="about" aria-labelledby="about-title">
     <img src="icon.svg" alt="" width="96" height="96">
     <h1 id="about-title">Redline</h1>

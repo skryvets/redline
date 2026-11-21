@@ -13,7 +13,11 @@ const details = $('details');
 const FRAME = 1 / 30;
 const LOG_LINES = 200;
 
+const narrow = matchMedia('(max-width: 699px)');
+
+let projects = [];
 let project = null;
+let sidebarOpen = (localStorage.getItem('sidebar') ?? (narrow.matches ? 'closed' : 'open')) === 'open';
 let markers = [];
 let render = null;
 let editing = null;
@@ -27,6 +31,19 @@ const current = () => markers.filter((m) => m.render === render).sort((a, b) => 
 const renderNames = () => project.renders.map((r) => r.name);
 const isTyping = (el) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
 const cleanError = (err) => err.message.replace(/^Error invoking remote method '[^']+': (Error: )?/, '');
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  node.className = className;
+  node.textContent = text;
+  return node;
+}
+
+// the status line lives in the deck, which is hidden until a project is open
+function fail(text) {
+  if (project) setStatus(text, 'error');
+  else alert(text);
+}
 
 function setStatus(text, kind = '') {
   statusEl.textContent = text;
@@ -49,10 +66,43 @@ function setRender(name) {
     video.load();
   } else {
     video.removeAttribute('src');
+    video.load();
   }
 }
 
+function setSidebar(open) {
+  sidebarOpen = open;
+  localStorage.setItem('sidebar', open ? 'open' : 'closed');
+  draw();
+}
+
+function drawProjects() {
+  $('sidebar').hidden = !sidebarOpen && (Boolean(project) || projects.length === 0);
+  $('no-projects').hidden = projects.length > 0;
+  $('projects').replaceChildren(
+    ...projects.map((p) => {
+      const isCurrent = p.dir === project?.dir;
+      const row = el('li', [isCurrent && 'current', p.running && 'running', p.missing && 'missing'].filter(Boolean).join(' '));
+      const pick = el('button', 'pick');
+      pick.type = 'button';
+      pick.title = p.running ? `${p.dir}\nClaude is working` : p.dir;
+      if (isCurrent) pick.setAttribute('aria-current', 'true');
+      pick.append(el('span', 'name', p.name), el('span', 'path', p.missing ? `Missing: ${p.path}` : p.path));
+      pick.addEventListener('click', () => selectProject(p.dir));
+      const remove = el('button', 'remove', '\u00d7');
+      remove.type = 'button';
+      remove.disabled = p.running;
+      remove.title = p.running ? 'Claude is still working on this project' : 'Remove from Redline';
+      remove.setAttribute('aria-label', `Remove ${p.name} from Redline`);
+      remove.addEventListener('click', () => removeProject(p));
+      row.append(pick, remove);
+      return row;
+    }),
+  );
+}
+
 function draw() {
+  drawProjects();
   const hasProject = Boolean(project);
   const hasCut = hasProject && project.renders.length > 0;
   $('welcome').hidden = hasProject;
@@ -183,6 +233,7 @@ async function startRun(request) {
   }
   running = true;
   runningSince = Date.now();
+  projects.find((p) => p.dir === project.dir).running = true;
   log = [];
   showDetails('');
   setStatus('Claude is starting');
@@ -195,7 +246,8 @@ async function fixOrStop() {
 }
 
 async function refresh(select) {
-  project = await api.loadProject();
+  ({projects, project} = await api.loadProject());
+  running = false;
   if (project) {
     markers = project.markers;
     running = project.runningSince !== null;
@@ -207,6 +259,14 @@ async function refresh(select) {
 }
 
 function onEvent(ev) {
+  if (ev.dir !== project?.dir) {
+    const other = projects.find((p) => p.dir === ev.dir);
+    if (ev.type !== 'done' || !other) return;
+    other.running = false;
+    draw();
+    if (!running) setStatus(`${other.name}: ${ev.ok ? `${ev.render.replace('.mp4', '')} is ready` : ev.error.split('\n')[0]}`, ev.ok ? '' : 'error');
+    return;
+  }
   if (ev.type === 'status') {
     log.push(ev.text);
     log = log.slice(-LOG_LINES);
@@ -310,7 +370,9 @@ noteText.addEventListener('keydown', (event) => {
 $('note-delete').addEventListener('click', deleteNote);
 
 $('open').addEventListener('click', openProject);
-$('project').addEventListener('click', openProject);
+$('project-add').addEventListener('click', openProject);
+$('project').addEventListener('click', () => setSidebar(!sidebarOpen));
+$('sidebar-hide').addEventListener('click', () => setSidebar(false));
 $('export').addEventListener('click', exportRender);
 $('add').addEventListener('click', addNote);
 $('fix').addEventListener('click', fixOrStop);
@@ -327,16 +389,42 @@ $('brief').addEventListener('submit', (event) => {
   startRun({brief: $('brief-text').value});
 });
 
-async function openProject() {
+async function switchProject(change) {
+  closeNote(true);
   try {
-    if (await api.openProject()) {
-      render = null;
-      setStatus('');
-      showDetails('');
-      await refresh();
-    }
+    if ((await change()) === false) return;
   } catch (err) {
-    setStatus(cleanError(err), 'error');
+    fail(cleanError(err));
+    return;
+  }
+  setRender(null);
+  log = [];
+  setStatus('');
+  showDetails('');
+  await refresh();
+  if (running) setStatus('Claude is working', 'busy');
+  if (narrow.matches) setSidebar(false);
+}
+
+function openProject() {
+  return switchProject(api.openProject);
+}
+
+function selectProject(dir) {
+  if (dir !== project?.dir) return switchProject(() => api.selectProject(dir));
+}
+
+async function removeProject(p) {
+  if (!confirm(`Remove "${p.name}" from Redline? The folder and its files stay on disk`)) return;
+  const change = () => api.removeProject(p.dir);
+  if (p.dir === project?.dir) return switchProject(change);
+  try {
+    await change();
+    projects = projects.filter((other) => other !== p);
+    draw();
+    setStatus(`${p.name} removed from Redline`);
+  } catch (err) {
+    fail(cleanError(err));
   }
 }
 
@@ -344,6 +432,11 @@ document.addEventListener('keydown', (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && project?.renders.length) {
     event.preventDefault();
     fixOrStop();
+    return;
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+    event.preventDefault();
+    setSidebar(!sidebarOpen);
     return;
   }
   if (isTyping(event.target) || event.metaKey || event.ctrlKey || video.hidden || $('about').open) return;
