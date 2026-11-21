@@ -52,6 +52,8 @@ The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it.
 
 **Redline - About Redline** shows the installed version and checks the latest [GitHub release](https://github.com/skryvets/redline/releases). **Update and restart** downloads the release zip, checks it against the SHA-256 that GitHub publishes for it, replaces the app and starts it again. Redline also checks once at launch and opens the same window when a newer version is out
 
+The app icon is drawn in `ui/icon.svg`. `build/icon.icns` is that drawing rendered at 1024px and packed with `iconutil`, so redo it when the SVG changes
+
 Every release needs both files from `npm run dist` attached: the DMG for a first install and `Redline-<version>-arm64-mac.zip` for the updater
 
 The updater is hand-rolled because Electron's own updater [needs a signed app](https://www.electronjs.org/docs/latest/api/auto-updater), and these builds are only ad-hoc signed, with no Developer ID. The checksum proves the download is the file on the release, not who made it, so the trust anchor is the GitHub repository
