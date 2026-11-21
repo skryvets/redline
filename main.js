@@ -10,7 +10,7 @@ const core = require('./lib/core');
 const update = require('./lib/update');
 
 const STATE_FILE = 'redline.json';
-const TOOLS = 'Bash,Read,Edit,Write,Glob,Grep';
+const TOOLS = 'Bash,Read,Edit,Write,Glob,Grep,Skill';
 const GUIDE = fs.readFileSync(path.join(__dirname, 'editor-guide.md'), 'utf8');
 const STOP_GRACE_MS = 5000;
 
@@ -62,14 +62,17 @@ function saveProjects() {
   return queued(() => writeJson(projectsFile(), saved));
 }
 
-async function renderNames(dir) {
+async function folderNames(dir, folder) {
   try {
-    return await fsp.readdir(path.join(dir, 'renders'));
+    return await fsp.readdir(path.join(dir, folder));
   } catch (err) {
     if (err.code === 'ENOENT') return [];
     throw err;
   }
 }
+
+const renderNames = (dir) => folderNames(dir, 'renders');
+const thumbnailNames = (dir) => folderNames(dir, 'thumbnails');
 
 async function projectState() {
   if (!project) return null;
@@ -78,7 +81,11 @@ async function projectState() {
     name,
     url: pathToFileURL(path.join(project, 'renders', name)).href,
   }));
-  return {dir: project, name: path.basename(project), renders, markers: state.markers, runningSince: runs.get(project)?.startedAt ?? null};
+  const thumbnails = core.listThumbnails(await thumbnailNames(project)).map((name) => ({
+    name,
+    url: pathToFileURL(path.join(project, 'thumbnails', name)).href,
+  }));
+  return {dir: project, name: path.basename(project), renders, thumbnails, markers: state.markers, runningSince: runs.get(project)?.startedAt ?? null};
 }
 
 async function appState() {
@@ -119,15 +126,15 @@ async function removeProject(dir) {
   await saveProjects();
 }
 
-async function exportRender(render) {
+async function exportFile(folder, name, title) {
   if (!project) throw new Error('Open a project folder first');
-  if (!(await renderNames(project)).includes(render)) throw new Error('That version no longer exists');
+  if (!(await folderNames(project, folder)).includes(name)) throw new Error('That file no longer exists');
   const {canceled, filePath} = await dialog.showSaveDialog(win, {
-    title: 'Export this version',
-    defaultPath: path.join(app.getPath('desktop'), `${path.basename(project)}-${render}`),
+    title,
+    defaultPath: path.join(app.getPath('desktop'), `${path.basename(project)}-${name}`),
   });
   if (canceled) return null;
-  await fsp.copyFile(path.join(project, 'renders', render), filePath);
+  await fsp.copyFile(path.join(project, folder, name), filePath);
   return filePath;
 }
 
@@ -143,11 +150,24 @@ function cleanMarkers(markers) {
   }));
 }
 
-async function start({render, brief} = {}) {
+function idleProject() {
   if (!project) throw new Error('Open a project folder first');
-  const dir = project;
-  if (runs.has(dir)) throw new Error('Claude is already working on this project');
+  if (runs.has(project)) throw new Error('Claude is already working on this project');
   if (updating) throw new Error('Redline is updating and will restart in a moment');
+  return project;
+}
+
+async function startThumbnail({render, direction} = {}) {
+  const dir = idleProject();
+  if (!(await renderNames(dir)).includes(render)) throw new Error('That version no longer exists');
+  const {sessionId} = await readState(dir);
+  const thumbnail = core.nextThumbnailName(await thumbnailNames(dir));
+  await fsp.mkdir(path.join(dir, 'thumbnails'), {recursive: true});
+  launch({dir, prompt: core.buildThumbnailPrompt({render, next: thumbnail, direction}), thumbnail, noteIds: [], sessionId});
+}
+
+async function start({render, brief} = {}) {
+  const dir = idleProject();
   const state = await readState(dir);
   const names = await renderNames(dir);
   const next = core.nextRenderName(names);
@@ -206,18 +226,19 @@ async function finish(current, {err, code}) {
     return;
   }
   try {
-    const made = (await renderNames(job.dir)).includes(job.next);
+    const output = job.thumbnail ? `thumbnails/${job.thumbnail}` : `renders/${job.next}`;
+    const made = (await (job.thumbnail ? thumbnailNames(job.dir) : renderNames(job.dir))).includes(path.basename(output));
     await updateState(job.dir, (state) => {
       if (current.sessionId) state.sessionId = current.sessionId;
       if (made) state.markers = state.markers.map((m) => (job.noteIds.includes(m.id) ? {...m, done: true, fixedIn: job.next} : m));
     });
     let error = null;
     if (!made) {
-      if (current.stopped) error = 'Stopped. No new version was made';
+      if (current.stopped) error = job.thumbnail ? 'Stopped. No thumbnail was made' : 'Stopped. No new version was made';
       else if (err) error = err.code === 'ENOENT' ? 'Claude Code was not found. Install it and make sure `claude` is on your PATH' : err.message;
-      else error = current.summary || current.stderr.trim() || `Claude exited with code ${code} without writing renders/${job.next}`;
+      else error = current.summary || current.stderr.trim() || `Claude exited with code ${code} without writing ${output}`;
     }
-    send({type: 'done', dir: job.dir, ok: made, render: made ? job.next : null, summary: current.summary, error});
+    send({type: 'done', dir: job.dir, ok: made, render: made && job.next ? job.next : null, thumbnail: made && job.thumbnail ? job.thumbnail : null, summary: current.summary, error});
   } catch (failure) {
     send({type: 'done', dir: job.dir, ok: false, render: null, summary: '', error: failure.message});
   }
@@ -324,7 +345,9 @@ app.whenReady().then(async () => {
       state.markers = clean;
     });
   });
-  ipcMain.handle('render:export', (_event, render) => exportRender(String(render)));
+  ipcMain.handle('render:export', (_event, render) => exportFile('renders', String(render), 'Export this version'));
+  ipcMain.handle('thumbnail:export', (_event, name) => exportFile('thumbnails', String(name), 'Export this thumbnail'));
+  ipcMain.handle('thumbnail:start', (_event, request) => startThumbnail(request));
   ipcMain.handle('claude:start', (_event, request) => start(request));
   ipcMain.handle('claude:stop', stop);
   ipcMain.handle('about:load', about);

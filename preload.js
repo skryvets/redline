@@ -7,6 +7,8 @@ contextBridge.exposeInMainWorld('redline', {
   loadProject: () => ipcRenderer.invoke('project:load'),
   saveMarkers: (markers) => ipcRenderer.invoke('markers:save', markers),
   exportRender: (render) => ipcRenderer.invoke('render:export', render),
+  exportThumbnail: (name) => ipcRenderer.invoke('thumbnail:export', name),
+  startThumbnail: (request) => ipcRenderer.invoke('thumbnail:start', request),
   start: (request) => ipcRenderer.invoke('claude:start', request),
   stop: () => ipcRenderer.invoke('claude:stop'),
   loadAbout: () => ipcRenderer.invoke('about:load'),
