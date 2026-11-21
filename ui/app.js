@@ -20,6 +20,8 @@ let editing = null;
 let running = false;
 let runningSince = 0;
 let log = [];
+let shuttle = 0;
+let shuttleAt = 0;
 
 const current = () => markers.filter((m) => m.render === render).sort((a, b) => a.t - b.t);
 const renderNames = () => project.renders.map((r) => r.name);
@@ -39,6 +41,7 @@ function showDetails(text) {
 function setRender(name) {
   if (name === render) return;
   closeNote(false);
+  shuttle = 0;
   render = name;
   const entry = project.renders.find((r) => r.name === name);
   if (entry) {
@@ -90,7 +93,7 @@ function drawPins() {
       pin.title = `${fmt(m.t)}  ${m.note}${m.done ? `  (fixed in ${m.fixedIn.replace('.mp4', '')})` : ''}`;
       pin.setAttribute('aria-label', `Note ${i + 1} at ${fmt(m.t)}`);
       pin.addEventListener('click', () => {
-        video.pause();
+        setShuttle(0);
         video.currentTime = m.t;
         openNote(m.id);
       });
@@ -141,7 +144,7 @@ function closeNote(keep) {
 
 function addNote() {
   if (running || !Number.isFinite(video.duration)) return;
-  video.pause();
+  setShuttle(0);
   closeNote(true);
   const marker = {id: crypto.randomUUID(), t: video.currentTime, note: '', render, done: false};
   markers.push(marker);
@@ -240,6 +243,13 @@ function stepVersion(by) {
 }
 
 function tick() {
+  // Chromium ignores a negative playbackRate, so reverse is a seek on every frame
+  if (shuttle < 0 && !video.seeking) {
+    const now = performance.now();
+    video.currentTime = Math.max(0, video.currentTime + (shuttle * (now - shuttleAt)) / 1000);
+    shuttleAt = now;
+    if (video.currentTime === 0) shuttle = 0;
+  }
   const duration = Number.isFinite(video.duration) ? video.duration : 0;
   const ratio = duration ? `${(video.currentTime / duration) * 100}%` : '0';
   $('playhead').style.left = ratio;
@@ -253,10 +263,20 @@ function tick() {
   requestAnimationFrame(tick);
 }
 
-const togglePlay = () => (video.paused ? video.play().catch(() => {}) : video.pause());
+function setShuttle(rate) {
+  shuttle = rate;
+  shuttleAt = performance.now();
+  video.playbackRate = Math.max(rate, 1);
+  if (rate > 0) video.play().catch(() => {});
+  else video.pause();
+}
+
+const togglePlay = () => setShuttle(video.paused && shuttle === 0 ? 1 : 0);
+const shuttleBy = (dir) => setShuttle(RedlineCore.shuttleRate(video.paused && shuttle > 0 ? 0 : shuttle, dir));
 
 video.addEventListener('loadedmetadata', drawPins);
 video.addEventListener('click', togglePlay);
+video.addEventListener('ended', () => (shuttle = 0));
 video.addEventListener('error', () => {
   if (video.src) setStatus(`Could not play ${render}`, 'error');
 });
@@ -328,6 +348,12 @@ document.addEventListener('keydown', (event) => {
     ' ': togglePlay,
     ArrowLeft: () => (video.currentTime -= step),
     ArrowRight: () => (video.currentTime += step),
+    j: () => shuttleBy(-1),
+    J: () => shuttleBy(-1),
+    k: () => setShuttle(0),
+    K: () => setShuttle(0),
+    l: () => shuttleBy(1),
+    L: () => shuttleBy(1),
     m: addNote,
     M: addNote,
     '[': () => stepVersion(-1),

@@ -31,7 +31,10 @@ Requirements: Node 20+, [Claude Code](https://code.claude.com/docs) logged in, `
 npm install
 npm start                 # or: npm start -- /path/to/project
 npm test
+npm run dist              # builds dist/Redline-<version>-arm64.dmg
 ```
+
+The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it. A copy downloaded on another Mac is blocked by Gatekeeper until you allow it in System Settings
 
 ## Keys
 
@@ -39,6 +42,7 @@ npm test
 | --- | --- |
 | `Space` | play or pause |
 | `←` `→` | one second back or forward, with `Shift` one frame |
+| `J` `K` `L` | play backward, stop, play forward. Press `J` or `L` again to double the speed, up to 8x |
 | `M` or double-click the timeline | add a note at the playhead |
 | `Enter` / `Esc` | save or discard the note you are typing |
 | `[` `]` | previous or next version |

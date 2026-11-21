@@ -6,9 +6,27 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "test": "node --test lib/"
+    "test": "node --test lib/",
+    "dist": "electron-builder --mac dmg"
   },
   "devDependencies": {
-    "electron": "^45.3.2"
+    "electron": "^45.3.2",
+    "electron-builder": "^26.18.0"
+  },
+  "build": {
+    "appId": "com.skryvets.redline",
+    "productName": "Redline",
+    "files": [
+      "main.js",
+      "preload.js",
+      "editor-guide.md",
+      "lib/core.js",
+      "ui/**"
+    ],
+    "mac": {
+      "category": "public.app-category.video",
+      "identity": "-",
+      "hardenedRuntime": false
+    }
   }
 }
