@@ -360,6 +360,8 @@ document.addEventListener('keydown', (event) => {
     L: () => shuttleBy(1),
     m: addNote,
     M: addNote,
+    n: addNote,
+    N: addNote,
     '[': () => stepVersion(-1),
     ']': () => stepVersion(1),
   };

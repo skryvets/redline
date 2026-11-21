@@ -8,7 +8,7 @@ Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 
 1. Open a project folder. Put footage, B-roll, photos and music anywhere inside it
 2. No cut yet? Describe the video in one box and press **Make the first cut**
-3. Watch the cut. Press `M` where something is wrong and type what should change
+3. Watch the cut. Press `N` where something is wrong and type what should change
 4. Press **Fix**. Every open note goes to Claude Code in one request
 5. A new version appears next to the old one. Nothing is ever overwritten
 6. Happy with a version? **Export** saves it as an mp4 wherever you like. It is also already sitting in `renders/`
@@ -43,7 +43,7 @@ The DMG is ad-hoc signed, not notarized. It opens fine on the Mac that built it.
 | `Space` | play or pause |
 | `←` `→` | one second back or forward, with `Shift` one frame |
 | `J` `K` `L` | play backward, stop, play forward. Press `J` or `L` again to double the speed, up to 8x |
-| `M` or double-click the timeline | add a note at the playhead |
+| `N`, `M` or double-click the timeline | add a note at the playhead |
 | `Enter` / `Esc` | save or discard the note you are typing |
 | `[` `]` | previous or next version |
 | `Cmd+Enter` | fix everything |
