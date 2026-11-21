@@ -1,6 +1,6 @@
 # Redline
 
-A video editor with two things on screen: the video and a timeline. You never edit by hand. You watch the cut, pin notes to moments on the timeline, press **Fix everything**, and Claude Code makes the edit and hands back a new version
+A video editor with two things on screen: the video and a timeline. You never edit by hand. You watch the cut, pin notes to moments on the timeline, press **Fix**, and Claude Code makes the edit and hands back a new version
 
 Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 
@@ -9,7 +9,7 @@ Built at the AIE x MLH Hackathon @ Code Summit, November 13 2026
 1. Open a project folder. Put footage, B-roll, photos and music anywhere inside it
 2. No cut yet? Describe the video in one box and press **Make the first cut**
 3. Watch the cut. Press `M` where something is wrong and type what should change
-4. Press **Fix everything**. Every open note goes to Claude Code in one request
+4. Press **Fix**. Every open note goes to Claude Code in one request
 5. A new version appears next to the old one. Nothing is ever overwritten
 6. Happy with a version? **Export** saves it as an mp4 wherever you like. It is also already sitting in `renders/`
 

@@ -31,8 +31,16 @@
         <div id="pins"></div>
       </div>
       <form id="note" hidden>
-        <input id="note-text" type="text" autocomplete="off" aria-label="Note for Claude" placeholder="What should Claude change here?">
-        <button type="button" id="note-delete" aria-label="Delete this note" title="Delete this note">&times;</button>
+        <textarea id="note-text" rows="2" autocomplete="off" aria-label="Note for Claude" placeholder="What should Claude change here?"></textarea>
+        <div id="note-actions">
+          <button type="button" id="note-delete" aria-label="Delete this note" title="Delete this note">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v5M14 11v5"/></svg>
+          </button>
+          <span id="note-hint">Shift + Enter for a new line</span>
+          <button id="note-save" class="primary" aria-label="Save note" title="Save note (Enter)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+          </button>
+        </div>
       </form>
     </div>
     <div id="bar">

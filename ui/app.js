@@ -73,7 +73,7 @@ function draw() {
   const open = hasCut ? pending(markers, render).length : 0;
   const fix = $('fix');
   fix.hidden = !running && !hasCut;
-  fix.textContent = running ? 'Stop' : open ? `Fix everything (${open})` : 'Fix everything';
+  fix.textContent = running ? 'Stop' : open ? `Fix (${open})` : 'Fix';
   fix.disabled = !running && open === 0;
   $('add').disabled = running;
   statusEl.classList.toggle('busy', running);
@@ -302,6 +302,10 @@ noteForm.addEventListener('focusout', (event) => {
 });
 noteText.addEventListener('keydown', (event) => {
   if (event.key === 'Escape') closeNote(false);
+  if (RedlineCore.submitsNote(event)) {
+    event.preventDefault();
+    closeNote(true);
+  }
 });
 $('note-delete').addEventListener('click', deleteNote);
 
