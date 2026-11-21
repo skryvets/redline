@@ -7,8 +7,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test lib/",
-    "dist": "electron-builder --mac",
-    "postdist": "cp \"dist/Redline-$npm_package_version-arm64.dmg\" dist/Redline-arm64.dmg"
+    "dist": "electron-builder --mac"
   },
   "devDependencies": {
     "electron": "^45.3.2",
